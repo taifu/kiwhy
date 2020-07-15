@@ -76,6 +76,10 @@ function newBoss(images, x, y, bang)
     end
   end
 
+  local set_last_shoot = function(last_shoot)
+    self.last_shoot = last_shoot
+  end
+  
   local shoot = function(x, y)
     if love.timer.getTime() - self.last_shoot > BOSS_SHOOTING then
       self.last_shoot = love.timer.getTime()
@@ -87,6 +91,7 @@ function newBoss(images, x, y, bang)
   
   return {
     get_name = get_name,
+    set_last_shoot = set_last_shoot,
     get_pos = get_pos,
     get_life = get_life,
     draw = draw,

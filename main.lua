@@ -11,6 +11,7 @@ PLAYER_LIFE = 10
 -- Fruits
 FRUIT_RATES = {0.4, 0.05, 0.55} -- sum must be 1
 -- Timeout in seconds
+MAYHEM_DELAY = 2
 PLAYER_SHOOTING = 0.225
 CROSSBOW_RELOAD = 7
 BOSS_SHOOTING = 0.4
@@ -29,12 +30,12 @@ require 'player'
 require 'fruits'
   
 function love.load()
+  love.window.setMode(1280, 720, {fullscreen=FULLSCREEN})
   love.window.setTitle("Kiwhy")
-  if FULLSCREEN then
-    love.window.setFullscreen(true)
-  else
-    love.window.setMode(1280, 720)
-  end
+  iconData = love.image.newImageData("images/Frutta/Anguria_0.png")
+  --icon = love.graphics.newImage("")
+  --print(icon)
+  love.window.setIcon(iconData)
   window_width, window_height = love.graphics.getDimensions()
     
   -- Scale factor
@@ -68,10 +69,15 @@ function love.load()
   game_win_width, game_win_height = popup_gameover:getDimensions()
   popup_scale_x = 1200 * scale_factor / game_win_width
   popup_scale_y = 700 * scale_factor / game_win_height
+  back_button = love.graphics.newImage("images/Menu/Back.png")
+  back_button_width, back_button_height = back_button:getDimensions()
+  back_button_scale_x = 370 * scale_factor / back_button_width
+  back_button_scale_y = 130 * scale_factor / back_button_height
 
   -- Misc
   game_audio = true
   margin = 100 * scale_factor
+  time_font = love.graphics.newFont("Wilkey.ttf", 60)
   
   -- Mouse
   love.mouse.setVisible(false) -- make default mouse invisible
@@ -93,7 +99,6 @@ function love.load()
   
   boss_shoot =  love.audio.newSource("audio/Sparo_Boss.wav", "static")
   boss_shoot:setVolume(0.2)
-  boss = newBoss(boss_images, window_width / 2, window_height / 2, boss_shoot)
   
   -- Crossbow
   crossbows_images = {
@@ -163,7 +168,10 @@ function love.load()
 end
 
 function game_reset()
-    -- Player
+  -- Boss
+  boss = newBoss(boss_images, window_width / 2, window_height / 2, boss_shoot)
+    
+  -- Player
   player = newPlayer(player_image, window_width / 2, window_height - margin, player_audio)
 
   -- Menù
@@ -171,7 +179,6 @@ function game_reset()
   love.audio.stop()
   love.audio.play(main_menu_theme)
  
-  next_spawn_fruit = love.timer.getTime() + FRUIT_SPAWN_MIN
   bullets = {}
   fruits = {}
   
@@ -180,6 +187,7 @@ function game_reset()
   mouse_button = 0
   mouse_x = 0
   mouse_y = 0
+  
 end
 
 function love.mousereleased( x, y, button )
@@ -222,7 +230,7 @@ function love.update(dt)
     end
   elseif game_status == 1 then
     if mouse_released then
-      if mouse_x < 300 * main_menu_scale_x and mouse_y * main_menu_scale_y < 200 then
+      if mouse_x < 300 * main_menu_scale_x and mouse_y < 200 * main_menu_scale_y then
         game_status = 0
       end
     end
@@ -240,12 +248,15 @@ function love.update(dt)
         game_status = 2
         love.audio.stop(main_menu_theme)
         love.audio.play(boss_theme)
+        game_start_timer = love.timer.getTime()
+        next_spawn_fruit = love.timer.getTime() + MAYHEM_DELAY
+        boss.set_last_shoot(love.timer.getTime() + MAYHEM_DELAY)
       end
     end
   elseif game_status == 3 or game_status == 4 then
     if mouse_released then
-      if mouse_x > 965 * popup_scale_x and mouse_x < 1550 * popup_scale_x 
-          and mouse_y > 500 * popup_scale_y and mouse_y < 1100 * popup_scale_y then
+      if mouse_x > 100 * back_button_scale_x and mouse_x < 450 * back_button_scale_x
+          and mouse_y > 710 * back_button_scale_y and mouse_y < 810 * back_button_scale_y then
         game_reset()
       end
     end
@@ -346,9 +357,11 @@ function love.update(dt)
     if boss.get_life() == 0 then
       game_status = 4
       source = game_win
+      game_time_score = love.timer.getTime() - game_start_timer
     elseif player.get_life() == 0 then
       game_status = 3
       source = game_lost
+      game_time_score = nil
     end
     if source then
       love.audio.stop(boss_theme)
@@ -412,6 +425,12 @@ function love.draw()
       local popup_x = window_width / 2 - game_win_width * popup_scale_x / 2
       local popup_y = window_height / 2 - game_win_height * popup_scale_y / 2
       love.graphics.draw(popup, popup_x, popup_y, 0, popup_scale_x, popup_scale_y)
+      love.graphics.draw(back_button, 100 * back_button_scale_x, window_height - 200 * back_button_scale_y, 0, back_button_scale_x, back_button_scale_y)
+      if game_time_score then
+        love.graphics.setFont(time_font)
+        love.graphics.setColor(1/255*226,1/255*103,1/255*118)
+        love.graphics.printf("You took " .. string.format("%.2f", game_time_score) .. " seconds", popup_x, popup_y, game_win_width * popup_scale_x , "center")
+      end
     end
   end
 
